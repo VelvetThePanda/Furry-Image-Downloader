@@ -55,7 +55,12 @@ namespace MFCD
             //Remember to set QueryDictionary["page"] to something else each iteration.//
             while(currentPage < QueriedPages)
             {
+                QueryDictionary["page"] = currentPage;
                 //Do something useful here//
+
+
+
+                currentPage++;
             }
             
         }
