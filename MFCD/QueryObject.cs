@@ -1,6 +1,9 @@
-﻿using System;
+﻿using NLog;
+using NLog.Fluent;
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http;
 using X10D;
 
 namespace MFCD
@@ -22,16 +25,25 @@ namespace MFCD
         public int QueriedPages { get; private set; }
         public Dictionary<string, object> QueryDictionary { get; private set; }
 
+        private HttpClient client;
+
+        private Logger log = Program.Log;
+
         private readonly Site queryFrom;
+
         private int remainingPosts;
-        private string baseURL;
-        private string queryURL;
         private int currentPage;
 
-        public QueryObject(Site query, int pages, params string[] tags)
+
+        private string baseURL;
+        private string queryURL;
+        
+
+        public QueryObject(HttpClient client, Site query, int pages, params string[] tags)
         {
             queryFrom = query;
             QueriedPages = pages;
+            this.client = client;
             SetURLFromSite();
 
             QueryDictionary = new Dictionary<string, object>
@@ -40,7 +52,7 @@ namespace MFCD
                 {"tags", tags }
             };
         }
-        public QueryObject(Site query, int pages)
+        public QueryObject(HttpClient client, Site query, int pages)
         {
             queryFrom = query;
             QueriedPages = pages;
@@ -51,15 +63,28 @@ namespace MFCD
         /// </summary>
         public void QueryPosts()
         {
-            queryURL = BuildURL(); //I'm probably gonna be calling this alot?//
+
             //Remember to set QueryDictionary["page"] to something else each iteration.//
             while(currentPage < QueriedPages)
             {
                 QueryDictionary["page"] = currentPage;
+                BuildURL();
                 //Do something useful here//
-
-
-
+                
+                switch (remainingPosts)
+                {
+                    case 10:
+                        log.Info("10 remaining posts for " + string.Join(',', QueryDictionary["tags"]));
+                        break;
+                    case 5:
+                        log.Info("5 remaining posts for " + string.Join(',', QueryDictionary["tags"]));
+                        break;
+                    case 0:
+                        log.Info("No remaining posts for " + string.Join(',', QueryDictionary["tags"]));
+                        break;
+                    default:
+                        break;
+                }
                 currentPage++;
             }
             
