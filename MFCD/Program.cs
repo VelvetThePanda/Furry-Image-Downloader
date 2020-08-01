@@ -1,17 +1,12 @@
 ﻿using MFCD.Content;
-using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
 using NLog;
 using NLog.Conditions;
 using NLog.Config;
-using NLog.Extensions.Logging;
 using NLog.Targets;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Drawing;
 using System.IO;
-using System.Reflection;
 using System.Threading;
 
 namespace MFCD
@@ -28,7 +23,15 @@ namespace MFCD
 
             InitLogger();
             SearchQueryManager.Init();
-            RetrieveAppConfiguration();
+            if(!(args.Length > 0)) 
+            {
+                RetrieveAppConfiguration();
+            }
+            else
+            {
+                ParseArgs(args);
+            }
+            
             Log.Warn("Early termination may corrupt in-progress images. This will be fixed soon.");
 
             //ParseArgs(args);
@@ -43,30 +46,31 @@ namespace MFCD
             
             if (!File.Exists("Configuration.JSON"))
             {
-                Log.Error(new FileNotFoundException(), "Config JSON not found! Config made in this folder");
+                Log.Fatal(new FileNotFoundException(), "Application configuration not found! Created new configuration.");
                 Configuration = new AppConfiguration
                 {
-                    FirstUse = true,
-                    SaveFolder = Directory.GetCurrentDirectory()
+                    SaveFolder = Directory.GetCurrentDirectory(),
+                    CategorizedContentHashes = new Dictionary<string, HashSet<string>>()
                 };
-                var ConfigJSON = JsonConvert.SerializeObject(Configuration);
+                var ConfigJSON = JsonConvert.SerializeObject(Configuration, Formatting.Indented, new JsonSerializerSettings 
+                {
+                    Formatting = Formatting.Indented,
+                    
+                });
                 File.WriteAllText(Path.Combine(Configuration.SaveFolder, "Configuration.JSON"), ConfigJSON);
                 Thread.Sleep(4000);
                 Environment.Exit(1);
             }
             else
             {
-                Configuration = JsonConvert.DeserializeObject<AppConfiguration>(File.ReadAllText("./Configuration.JSON"));
+                Configuration = JsonConvert.DeserializeObject<AppConfiguration>(File.ReadAllText("Configuration.JSON"));
                 Log.Info("Loaded app configuration");
             }
         }
 
         private static void ParseArgs(string[] arguments) 
         {
-            //if (args.Length < 1)
-            //{
-            //    Environment.Exit(-4);
-            //}
+
 
         }
 

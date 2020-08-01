@@ -1,10 +1,14 @@
-﻿using NLog;
-using NLog.Fluent;
+﻿using MFCD.Booru_Site_Types;
+using Newtonsoft.Json;
+using NLog;
 using System;
 using System.Collections.Generic;
-using System.Linq;
+using System.IO;
 using System.Net.Http;
+using System.Threading.Tasks;
 using X10D;
+using System.Text.RegularExpressions;
+using MFCD.Content;
 
 namespace MFCD
 {
@@ -30,6 +34,10 @@ namespace MFCD
         private Logger log = Program.Log;
 
         private readonly Site queryFrom;
+        private Type JSONType;
+
+
+        private string safeFolderName;
 
         private int remainingPosts;
         private int currentPage;
@@ -44,6 +52,8 @@ namespace MFCD
             queryFrom = query;
             QueriedPages = pages;
             this.client = client;
+            var tagsString = string.Join(' ', tags);
+            safeFolderName = Regex.Replace(tagsString, "[\\/?:<>\"|]", "", RegexOptions.IgnoreCase);
             SetURLFromSite();
 
             QueryDictionary = new Dictionary<string, object>
@@ -61,7 +71,7 @@ namespace MFCD
         /// <summary>
         /// Will query posts up to the specified amount of pages set.
         /// </summary>
-        public void QueryPosts()
+        public async Task QueryPosts()
         {
 
             //Remember to set QueryDictionary["page"] to something else each iteration.//
@@ -70,24 +80,48 @@ namespace MFCD
                 QueryDictionary["page"] = currentPage;
                 BuildURL();
                 //Do something useful here//
+                var response = await client.GetAsync(queryURL);
                 
-                switch (remainingPosts)
-                {
-                    case 10:
-                        log.Info("10 remaining posts for " + string.Join(',', QueryDictionary["tags"]));
-                        break;
-                    case 5:
-                        log.Info("5 remaining posts for " + string.Join(',', QueryDictionary["tags"]));
-                        break;
-                    case 0:
-                        log.Info("No remaining posts for " + string.Join(',', QueryDictionary["tags"]));
-                        break;
-                    default:
-                        break;
-                }
+                var responseContent = response.Content;
+
+                var responseJSON = JsonConvert.DeserializeObject<BooruJSONResponse>(await responseContent.ReadAsStringAsync());
+
+                await DownloadPostsFromPageAsync(responseJSON);
+
+                
                 currentPage++;
             }
             
+        }
+        private async Task DownloadPostsFromPageAsync(BooruJSONResponse postResponse)
+        {
+            var downloadedPosts = 0;
+            foreach(var post in postResponse.Posts)
+            {
+                if (ContainsHash(post.File!.Md5))
+                {
+                    log.Error($"Already saved post with hash of {post.File!.Md5}! Skipping.");
+                    continue;
+                }
+                
+                remainingPosts = postResponse.Posts.Count - downloadedPosts++;
+                
+                var imageStream = await client.GetStreamAsync(post.File!.Url);
+                var imageURL = post.File.Url.ToString();
+                var imageName = imageURL.Substring(imageURL.LastIndexOf('/'));
+                using var sr = new FileStream(Path.Combine(Program.Configuration.SaveFolder, safeFolderName, imageName), FileMode.Create);
+                
+                if(remainingPosts == 0)
+                {
+                    log.Info("No posts remaining");
+                }
+            }
+        }
+
+        private bool ContainsHash(string hash)
+        {
+            var tagKey = (QueryDictionary["tags"] as string[])[0];
+            return Program.Configuration.CategorizedContentHashes[tagKey].Contains(hash);
         }
 
         private string BuildURL()
@@ -101,9 +135,12 @@ namespace MFCD
             {
                 case Site.e621:
                     baseURL = "https://e621.net/posts.json?";
+                    JSONType = typeof(BooruJSONResponse);
                     break;
                 case Site.e926:
                     baseURL = "https://e926.net/posts.json?";
+                    //This actually hasn't been implemented because I haven't bothered to go on e926 atm.
+                    JSONType = typeof(BooruJSONResponse);
                     break;
             }
         }

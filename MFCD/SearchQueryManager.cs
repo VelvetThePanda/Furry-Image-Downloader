@@ -10,7 +10,7 @@ namespace MFCD.Content
         public static HttpClient Thread3Client { get; } = new HttpClient();
         public static HttpClient Thread4Client { get; } = new HttpClient();
 
-        private static Logger log = Program.Log;
+        private static readonly Logger log = Program.Log;
 
         public static void Init()
         {
