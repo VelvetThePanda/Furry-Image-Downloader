@@ -85,12 +85,9 @@ namespace MFCD
                                     PageLimit = 1, 
                                     Tags = "This is the tags, seperated by spaces "
                                 },
-                             new E621Search
-                                {
-                                    BlackList = "This is your blacklist; no need to add (-) to anything, as it's automagically done for you.",
-                                    PageLimit = 1,
-                                    Tags = "This is the tags, seperated by spaces "
-                                }
+                             new E621Search { },
+                             new E621Search { },
+                             new E621Search { },
                         },
                     E926Searches = new List<E926Search>
                         {
@@ -100,13 +97,9 @@ namespace MFCD
                                     PageLimit = 1,
                                     Tags = "This is the tags, seperated by spaces"
                                 },
-                             new E926Search
-                                {
-                                    BlackList = "This is your blacklist; no need to add (-) to anything, as it's automagically done for you.",
-                                    PageLimit = 1,
-                                    Tags = "This is the tags, seperated by spaces"
-                                }
-
+                            new E926Search { },
+                            new E926Search { },
+                            new E926Search { },
                         }
 
                 };
