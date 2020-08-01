@@ -7,6 +7,7 @@ using NLog.Targets;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading;
 
 namespace MFCD
@@ -23,7 +24,7 @@ namespace MFCD
 
             InitLogger();
             SearchQueryManager.Init();
-            if(!(args.Length > 0)) 
+            if(!args.Any()) 
             {
                 RetrieveAppConfiguration();
             }
@@ -35,7 +36,8 @@ namespace MFCD
             Log.Warn("Early termination may corrupt in-progress images. This will be fixed soon.");
 
             //ParseArgs(args);
-
+            
+            
           
             Console.Read();
             
@@ -43,7 +45,8 @@ namespace MFCD
 
         private static void RetrieveAppConfiguration()
         {
-            
+            //General App Configuration
+            #region AppConfig
             if (!File.Exists("Configuration.JSON"))
             {
                 Log.Fatal(new FileNotFoundException(), "Application configuration not found! Created new configuration.");
@@ -66,6 +69,66 @@ namespace MFCD
                 Configuration = JsonConvert.DeserializeObject<AppConfiguration>(File.ReadAllText("Configuration.JSON"));
                 Log.Info("Loaded app configuration");
             }
+            #endregion AppConfig
+            //Configuration for tags
+            #region TagConfig
+            if (!File.Exists("Searches.JSON"))
+            {
+                Log.Error(new FileNotFoundException(), "Search configuration file was not present. File generated in directory.");
+                var config = new BulkSearchQuery()
+                {
+                    E621Searches = new List<E621Search> 
+                        { 
+                            new E621Search 
+                                {
+                                    BlackList = "This is your blacklist; no need to add (-) to anything, as it's automagically done for you.", 
+                                    PageLimit = 1, 
+                                    Tags = "This is the tags, seperated by spaces "
+                                },
+                             new E621Search
+                                {
+                                    BlackList = "This is your blacklist; no need to add (-) to anything, as it's automagically done for you.",
+                                    PageLimit = 1,
+                                    Tags = "This is the tags, seperated by spaces "
+                                }
+                        },
+                    E926Searches = new List<E926Search>
+                        {
+                            new E926Search
+                                {
+                                    BlackList = "This is your blacklist; no need to add (-) to anything, as it's automagically done for you.",
+                                    PageLimit = 1,
+                                    Tags = "This is the tags, seperated by spaces"
+                                },
+                             new E926Search
+                                {
+                                    BlackList = "This is your blacklist; no need to add (-) to anything, as it's automagically done for you.",
+                                    PageLimit = 1,
+                                    Tags = "This is the tags, seperated by spaces"
+                                }
+
+                        }
+
+                };
+
+                var searchJSON = JsonConvert.SerializeObject(config, Formatting.Indented);
+                File.WriteAllText("Searches.JSON", searchJSON);
+                Thread.Sleep(5000);
+                Environment.Exit(-1);
+
+            }
+            else
+            {
+                InitSearches();
+            }
+
+            #endregion TagConfig
+        }
+
+        private static void InitSearches()
+        {
+            var searchInfoText = File.ReadAllText("Searches.JSON");
+            var searchInfoJSON = JsonConvert.DeserializeObject<BulkSearchQuery>(searchInfoText);
         }
 
         private static void ParseArgs(string[] arguments) 

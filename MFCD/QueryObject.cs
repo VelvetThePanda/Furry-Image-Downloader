@@ -29,15 +29,15 @@ namespace MFCD
         public int QueriedPages { get; private set; }
         public Dictionary<string, object> QueryDictionary { get; private set; }
 
-        private HttpClient client;
+        private readonly HttpClient client;
 
-        private Logger log = Program.Log;
+        private readonly Logger log = Program.Log;
 
         private readonly Site queryFrom;
-        private Type JSONType;
+       
 
 
-        private string safeFolderName;
+        private readonly string safeFolderName;
 
         private int remainingPosts;
         private int currentPage;
@@ -62,12 +62,7 @@ namespace MFCD
                 {"tags", tags }
             };
         }
-        public QueryObject(HttpClient client, Site query, int pages)
-        {
-            queryFrom = query;
-            QueriedPages = pages;
-            SetURLFromSite();
-        }
+        
         /// <summary>
         /// Will query posts up to the specified amount of pages set.
         /// </summary>
@@ -78,7 +73,7 @@ namespace MFCD
             while(currentPage < QueriedPages)
             {
                 QueryDictionary["page"] = currentPage;
-                BuildURL();
+                queryURL = BuildURL();
                 //Do something useful here//
                 var response = await client.GetAsync(queryURL);
                 
@@ -106,10 +101,14 @@ namespace MFCD
                 
                 remainingPosts = postResponse.Posts.Count - downloadedPosts++;
                 
+
+                //Download the image as it's served. 
                 var imageStream = await client.GetStreamAsync(post.File!.Url);
                 var imageURL = post.File.Url.ToString();
+                //As far as I'm aware, most Booru websites just save the MD5 Hash, which would be fine for this.
                 var imageName = imageURL.Substring(imageURL.LastIndexOf('/'));
-                using var sr = new FileStream(Path.Combine(Program.Configuration.SaveFolder, safeFolderName, imageName), FileMode.Create);
+                var savePath = Path.Combine(Program.Configuration.SaveFolder, safeFolderName, imageName);
+                using var sr = new FileStream(savePath, FileMode.Create);
                 
                 if(remainingPosts == 0)
                 {
@@ -135,12 +134,9 @@ namespace MFCD
             {
                 case Site.e621:
                     baseURL = "https://e621.net/posts.json?";
-                    JSONType = typeof(BooruJSONResponse);
                     break;
                 case Site.e926:
                     baseURL = "https://e926.net/posts.json?";
-                    //This actually hasn't been implemented because I haven't bothered to go on e926 atm.
-                    JSONType = typeof(BooruJSONResponse);
                     break;
             }
         }
