@@ -1,144 +1,80 @@
-﻿using MFCD.Booru_Site_Types;
-using Newtonsoft.Json;
+﻿using Newtonsoft.Json;
 using NLog;
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Net.Http;
 using System.Threading.Tasks;
 using X10D;
-using System.Text.RegularExpressions;
-using MFCD.Content;
 
 namespace MFCD
 {
-    public class QueryObject
+    public sealed class QueryObject
     {
-        public enum Site
-        {
-            e621,
-            e926,
-            //FurryBooru,
-            //Rule34,
-            //Gelbooru,
-            //Safebooru,
-            //XBooru,
-            //Coming soon//
-        }
 
-        public int QueriedPages { get; private set; }
-        public Dictionary<string, object> QueryDictionary { get; private set; }
+        public string Site { get; set; }
+        public string Tags { get; set; }
+
+
+        private readonly int pages;
 
         private readonly HttpClient client;
 
         private readonly Logger log = Program.Log;
 
-        private readonly Site queryFrom;
-       
+        private readonly Dictionary<string, object> queryDictionary = new Dictionary<string, object>();
 
+        /*
+         * Maybe Six helper threads that retreive from a queue in no particular order,
+         * So this wouldn't have the concurrent queue, but some other object.
+         * 
+         * 
+         */
 
-        private readonly string safeFolderName;
-
-        private int remainingPosts;
-        private int currentPage;
-
-
-        private string baseURL;
-        private string queryURL;
-        
-
-        public QueryObject(HttpClient client, Site query, int pages, params string[] tags)
+        public QueryObject(HttpClient clientRef, int pages, string tags = null)
         {
-            queryFrom = query;
-            QueriedPages = pages;
-            this.client = client;
-            var tagsString = string.Join(' ', tags);
-            safeFolderName = Regex.Replace(tagsString, "[\\/?:<>\"|]", "", RegexOptions.IgnoreCase);
-            SetURLFromSite();
-
-            QueryDictionary = new Dictionary<string, object>
-            {
-                {"page", 1 },
-                {"tags", tags }
-            };
+            this.pages = pages;
+            Tags = tags;
+            client = clientRef;
+            queryDictionary.Add("tags", Tags);
+            queryDictionary.Add("page", 1);
         }
-        
-        /// <summary>
-        /// Will query posts up to the specified amount of pages set.
-        /// </summary>
+
         public async Task QueryPosts()
         {
+            if (Site is null || Tags is null)
+                return;
 
-            //Remember to set QueryDictionary["page"] to something else each iteration.//
-            while(currentPage < QueriedPages)
+
+            for(int i = 0; i < pages; i++)
             {
-                QueryDictionary["page"] = currentPage;
-                queryURL = BuildURL();
-                //Do something useful here//
-                var response = await client.GetAsync(queryURL);
-                
-                var responseContent = response.Content;
+                var page = queryDictionary["page"];
+                queryDictionary["page"] = int.Parse(page.ToString()) + 1;
 
-                var responseJSON = JsonConvert.DeserializeObject<BooruJSONResponse>(await responseContent.ReadAsStringAsync());
-
-                await DownloadPostsFromPageAsync(responseJSON);
-
-                
-                currentPage++;
-            }
-            
-        }
-        private async Task DownloadPostsFromPageAsync(BooruJSONResponse postResponse)
-        {
-            var downloadedPosts = 0;
-            foreach(var post in postResponse.Posts)
-            {
-                if (ContainsHash(post.File!.Md5))
+                var queryPage = new UriBuilder
                 {
-                    log.Error($"Already saved post with hash of {post.File!.Md5}! Skipping.");
-                    continue;
-                }
-                
-                remainingPosts = postResponse.Posts.Count - downloadedPosts++;
-                
+                    Host = Site,
+                    Query = queryDictionary.ToGetParameters(),
+                };
 
-                //Download the image as it's served. 
-                var imageStream = await client.GetStreamAsync(post.File!.Url);
-                var imageURL = post.File.Url.ToString();
-                //As far as I'm aware, most Booru websites just save the MD5 Hash, which would be fine for this.
-                var imageName = imageURL.Substring(imageURL.LastIndexOf('/'));
-                var savePath = Path.Combine(Program.Configuration.SaveFolder, safeFolderName, imageName);
-                using var sr = new FileStream(savePath, FileMode.Create);
-                
-                if(remainingPosts == 0)
+
+                var response = await client.GetAsync(queryPage.ToString());
+                var rawResponseJSON = await response.Content.ReadAsStringAsync();
+                var responseJSON = JsonConvert.DeserializeObject<BooruResponse>(rawResponseJSON);
+
+                foreach (var post in responseJSON.Posts)
                 {
-                    log.Info("No posts remaining");
+                    var hash = post.File.Md5;
+                    if (PostDownloadHelper.ContainsHash(Tags, hash))
+                    {
+                        log.Info($"File with hash {hash} already exists; skipping.");
+                    }
+                    else
+                    {
+                        PostDownloadHelper.MD5Hashes[Tags].Add(hash);
+                        PostDownloadHelper.DownloadQueue.Enqueue(post.File.Url.ToString());
+                    }
                 }
-            }
-        }
-
-        private bool ContainsHash(string hash)
-        {
-            var tagKey = (QueryDictionary["tags"] as string[])[0];
-            return Program.Configuration.CategorizedContentHashes[tagKey].Contains(hash);
-        }
-
-        private string BuildURL()
-        {   
-            return new UriBuilder() { Host = baseURL, Query = QueryDictionary.ToGetParameters() }.ToString();
-        }
-
-        private void SetURLFromSite()
-        {
-            switch (queryFrom)
-            {
-                case Site.e621:
-                    baseURL = "https://e621.net/posts.json?";
-                    break;
-                case Site.e926:
-                    baseURL = "https://e926.net/posts.json?";
-                    break;
-            }
+            }    
         }
     }
 }

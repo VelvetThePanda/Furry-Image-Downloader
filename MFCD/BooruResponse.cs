@@ -1,11 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
 
-namespace MFCD.Booru_Site_Types
+namespace MFCD
 {
 
-    public partial class BooruJSONResponse
+    public partial class BooruResponse
     {
         public List<Post> Posts { get; set; }
     }
@@ -15,17 +14,17 @@ namespace MFCD.Booru_Site_Types
         public long? Id { get; set; }
         public DateTimeOffset? CreatedAt { get; set; }
         public DateTimeOffset? UpdatedAt { get; set; }
-        public Image File { get; set; }
+        public File File { get; set; }
         public Preview Preview { get; set; }
         public Preview Sample { get; set; }
         public Score Score { get; set; }
         public Tags Tags { get; set; }
-        public List<string> LockedTags { get; set; }
+        public List<object> LockedTags { get; set; }
         public long? ChangeSeq { get; set; }
         public Flags Flags { get; set; }
         public Rating? Rating { get; set; }
         public long? FavCount { get; set; }
-        public List<string> Sources { get; set; }
+        public List<Uri> Sources { get; set; }
         public List<long> Pools { get; set; }
         public Relationships Relationships { get; set; }
         public long? ApproverId { get; set; }
@@ -36,7 +35,7 @@ namespace MFCD.Booru_Site_Types
         public bool? HasNotes { get; set; }
     }
 
-    public partial class Image
+    public partial class File
     {
         public long? Width { get; set; }
         public long? Height { get; set; }
@@ -66,7 +65,7 @@ namespace MFCD.Booru_Site_Types
 
     public partial class Relationships
     {
-        public long? ParentId { get; set; }
+        public object ParentId { get; set; }
         public bool? HasChildren { get; set; }
         public bool? HasActiveChildren { get; set; }
         public List<long> Children { get; set; }
@@ -87,12 +86,11 @@ namespace MFCD.Booru_Site_Types
         public List<string> Copyright { get; set; }
         public List<string> Artist { get; set; }
         public List<object> Invalid { get; set; }
-        public List<object> Lore { get; set; }
+        public List<string> Lore { get; set; }
         public List<string> Meta { get; set; }
     }
 
-    public enum Ext { Gif, Jpg, Png };
+    public enum Ext { Jpg, Png };
 
     public enum Rating { S };
 }
-
