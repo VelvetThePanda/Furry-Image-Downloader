@@ -10,7 +10,6 @@ namespace MFCD
 
         public async Task QueryPostsFromJSON(Search[]  searches)
         {
-
             var TaskList = new List<Task>();
             foreach(var search in searches)
             {
@@ -23,6 +22,5 @@ namespace MFCD
             await queryTask;
             PostDownloadHelper.ThreadsFinished = queryTask.IsCompleted;
         }
-
     }
 }

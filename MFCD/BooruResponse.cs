@@ -14,7 +14,7 @@ namespace MFCD
         public long? Id { get; set; }
         public DateTimeOffset? CreatedAt { get; set; }
         public DateTimeOffset? UpdatedAt { get; set; }
-        public File File { get; set; }
+        public Image File { get; set; }
         public Preview Preview { get; set; }
         public Preview Sample { get; set; }
         public Score Score { get; set; }
@@ -35,7 +35,7 @@ namespace MFCD
         public bool? HasNotes { get; set; }
     }
 
-    public partial class File
+    public partial class Image
     {
         public long? Width { get; set; }
         public long? Height { get; set; }
@@ -90,7 +90,7 @@ namespace MFCD
         public List<string> Meta { get; set; }
     }
 
-    public enum Ext { Jpg, Png };
+    public enum Ext { Jpg, Png, Gif, Webm, Swf };
 
     public enum Rating { S };
 }

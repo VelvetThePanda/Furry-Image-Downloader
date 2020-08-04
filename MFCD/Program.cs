@@ -1,10 +1,11 @@
-﻿using NLog;
+﻿using Newtonsoft.Json;
+using NLog;
 using NLog.Conditions;
 using NLog.Config;
 using NLog.Targets;
 using System;
-using System.Diagnostics;
-using System.Threading;
+using System.Collections.Generic;
+using System.IO;
 using System.Threading.Tasks;
 
 namespace MFCD
@@ -13,22 +14,46 @@ namespace MFCD
     {
 
         public static Logger Log { get; } = LogManager.GetCurrentClassLogger();
-        public static async Task Main() 
+        public static async Task Main()
         {
             InitLogger();
 
+            //Get Configuration from file.
+
+
             Console.CancelKeyPress += OnControlC;
-          
 
             Console.ReadKey(true);
-            
 
+
+
+        }
+
+
+
+        private static async Task<Search[]> RetrieveConfigAsync()
+        {
+            if (File.Exists("Config.JSON"))
+            {
+                var config = await File.ReadAllTextAsync("Config.JSON");
+                var returnConfig = JsonConvert.DeserializeObject<IEnumerable<Search>>(config);
+                Log.Debug("Loaded configuration successfully");
+                return returnConfig as Search[];
+            }
+            else
+            {
+                return new Search[2];
+            }
+
+            return null;
         }
 
         private static void OnControlC(object sender, ConsoleCancelEventArgs e)
         {
             Log.Trace("Ctrl+C / Ctrl + Break Detected!");
-            Environment.Exit(0);
+            //Do some thread handling here.
+            PostDownloadHelper.ThreadsFinished = true;
+            
         }
 
         private static void InitLogger()

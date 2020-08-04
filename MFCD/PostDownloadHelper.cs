@@ -33,13 +33,14 @@ namespace MFCD
                         await Task.Delay(100);
                     else
                     {
-                        foreach(var post in DownloadQueue)
+                        for(var i = 0; i < 10; i++)
                         {
-                            var stream = await client.GetStreamAsync(post.URL);
-                            var folderName = Regex.Replace(post.FolderName, "[\\/?:<>\"|]", "", RegexOptions.IgnoreCase);
+                            DownloadQueue.TryDequeue(out var download);
+                            if (download is null) continue;
+                            var stream = await client.GetStreamAsync(download.URL);
+                            var folderName = Regex.Replace(download.FolderName, "[\\/?:<>\"|]", "", RegexOptions.IgnoreCase);
                             var folderPath = Path.Combine(Directory.GetCurrentDirectory(), folderName);
-                            var fileName = post.URL.Substring(post.URL.LastIndexOf('/') + 1);
-
+                            var fileName = download.URL.Substring(download.URL.LastIndexOf('/') + 1);
                             using var writer = new FileStream(Path.Combine(folderPath, fileName), FileMode.Create);
                             await stream.CopyToAsync(writer);
                         }
@@ -58,14 +59,12 @@ namespace MFCD
                         using var writer = new FileStream(Path.Combine(folderPath, fileName), FileMode.Create);
                         await stream.CopyToAsync(writer);
                     }
+
+                    Log.Trace("Threads joined.");
+                    Log.Info("No images remain in queue.");
+                    break;
                 } 
-
-
-
-
-
-            }
-            
+            }       
         }
 
 
