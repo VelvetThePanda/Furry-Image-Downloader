@@ -39,13 +39,13 @@ namespace MFCD
             queryDictionary.Add("page", 1);
         }
 
-        public async Task QueryPosts()
+        public async Task<bool> QueryPosts()
         {
             if (Site is null || Tags is null)
-                return;
+                return false;
 
 
-            for(int i = 0; i < pages; i++)
+            for (int i = 0; i < pages; i++)
             {
                 var page = queryDictionary["page"];
                 queryDictionary["page"] = int.Parse(page.ToString()) + 1;
@@ -71,10 +71,11 @@ namespace MFCD
                     else
                     {
                         PostDownloadHelper.MD5Hashes[Tags].Add(hash);
-                        PostDownloadHelper.DownloadQueue.Enqueue(post.File.Url.ToString());
+                        PostDownloadHelper.DownloadQueue.Enqueue(new Download { FolderName = Tags, URL = post.File.Url.ToString() } );
                     }
                 }
-            }    
+            }
+            return true;
         }
     }
 }
