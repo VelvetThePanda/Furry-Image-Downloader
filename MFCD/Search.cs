@@ -1,17 +1,20 @@
 ﻿using Newtonsoft.Json;
+using System;
 
 namespace MFCD
 {
-    public abstract class Search
+
+    public sealed class Search
     {
+
         [JsonProperty]
-        public string Site { get; protected set; }
+        public string Site { get; set; } = "";
         [JsonProperty]
-        public string Tags { get; set; }
+        public string Tags { get; set; } = "";
         [JsonProperty]
-        public string Blacklist { get; set; }
-        [JsonProperty]
-        public int Pages { get; set; }
+        public string Blacklist { get; set; } = "";
+        [JsonProperty(PropertyName = "Page limit (Hard Limit of 750)")]
+        public int Pages { get; set; } = 1;
 
     }
 }

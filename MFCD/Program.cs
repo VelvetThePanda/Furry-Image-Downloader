@@ -16,12 +16,12 @@ namespace MFCD
         public static Logger Log { get; } = LogManager.GetCurrentClassLogger();
         public static async Task Main()
         {
-            InitLogger();
-
-            //Get Configuration from file.
-
-
             Console.CancelKeyPress += OnControlC;
+            InitLogger();
+            //Get Configuration from file.
+            await new TopLevelQueryManager().QueryPostsFromJSON(await RetrieveConfigAsync());
+
+
 
             Console.ReadKey(true);
 
@@ -31,18 +31,33 @@ namespace MFCD
 
 
 
-        private static async Task<Search[]> RetrieveConfigAsync()
+        private static async Task<SearchList> RetrieveConfigAsync()
         {
             if (File.Exists("Config.JSON"))
             {
                 var config = await File.ReadAllTextAsync("Config.JSON");
-                var returnConfig = JsonConvert.DeserializeObject<IEnumerable<Search>>(config);
+                var returnConfig = JsonConvert.DeserializeObject<SearchList>(config);
                 Log.Debug("Loaded configuration successfully");
-                return returnConfig as Search[];
+                return returnConfig;
             }
             else
             {
-                return new Search[2];
+                Log.Error($"No config exists in directory. Please configure the one left ({Directory.GetCurrentDirectory()})");
+                var save = JsonConvert.SerializeObject(new SearchList
+                {
+                    Queries = new List<Search> 
+                    {
+                        new Search { },
+                        new Search { },
+                        new Search { },
+                        new Search { },
+                    }
+                },
+                Formatting.Indented
+                );
+                await File.WriteAllTextAsync("Config.JSON", save);
+                await Task.Delay(5000);
+                Environment.Exit(404);
             }
 
             return null;
@@ -52,6 +67,7 @@ namespace MFCD
         {
             Log.Trace("Ctrl+C / Ctrl + Break Detected!");
             //Do some thread handling here.
+            File.Delete("Config.JSON");
             PostDownloadHelper.ThreadsFinished = true;
             
         }
