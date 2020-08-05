@@ -19,8 +19,10 @@ namespace MFCD
             Console.CancelKeyPress += OnControlC;
             InitLogger();
             //Get Configuration from file.
+            await Task.Delay(600);
             await new TopLevelQueryManager().QueryPostsFromJSON(await RetrieveConfigAsync());
-
+            await Task.Delay(1500);
+            await PostDownloadHelper.DrainQueue();
 
 
             Console.ReadKey(true);
@@ -67,9 +69,9 @@ namespace MFCD
         {
             Log.Trace("Ctrl+C / Ctrl + Break Detected!");
             //Do some thread handling here.
-            File.Delete("Config.JSON");
+
             PostDownloadHelper.ThreadsFinished = true;
-            
+            Environment.Exit(200);
         }
 
         private static void InitLogger()

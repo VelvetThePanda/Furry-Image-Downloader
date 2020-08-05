@@ -25,6 +25,9 @@ namespace MFCD
         public static async Task DrainQueue()
         {
             client.DefaultRequestHeaders.UserAgent.ParseAdd("MFCD / 1.0 (By VelvetThePanda)");
+            Program.Log.Trace("Entering queue wait loop");
+            await Task.Delay(1000);
+            Program.Log.Debug("Waiting for images to fill loop.");
             while (true)
             {
                 if (!threadsFinished) 
