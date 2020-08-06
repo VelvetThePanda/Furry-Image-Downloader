@@ -2,7 +2,9 @@
 using NLog;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net.Http;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using X10D;
 
@@ -30,20 +32,20 @@ namespace MFCD
          * 
          */
 
-        public QueryObject(HttpClient clientRef, int pages, string tags = null)
+        public QueryObject(HttpClient clientRef, int pages, string tags = "")
         {
             this.pages = pages;
             Tags = tags;
             client = clientRef;
             queryDictionary.Add("tags", Tags);
-            queryDictionary.Add("page", 1);
+            queryDictionary.Add("page", 0);
         }
 
         public async Task<bool> QueryPosts()
         {
             if (Site is null || Tags is null)
                 return false;
-
+            Site += "/posts.json";
 
             for (int i = 0; i < pages; i++)
             {
@@ -57,20 +59,26 @@ namespace MFCD
                 };
 
 
-                var response = await client.GetAsync(queryPage.ToString());
+                var url = queryPage.ToString();
+                var response = await client.GetAsync(url.Remove(url.LastIndexOf('/'), 1));
                 var rawResponseJSON = await response.Content.ReadAsStringAsync();
+
                 var responseJSON = JsonConvert.DeserializeObject<BooruResponse>(rawResponseJSON);
 
                 foreach (var post in responseJSON.Posts)
                 {
                     var hash = post.File.Md5;
-                    if (PostDownloadHelper.ContainsHash(Tags, hash))
+                    var lookupTag = Tags.Split(' ');
+                    Array.Sort(lookupTag);
+                    if (PostDownloadHelper.ContainsHash(lookupTag[0], hash))
                     {
                         log.Info($"File with hash {hash} already exists; skipping.");
                     }
                     else
                     {
-                        PostDownloadHelper.MD5Hashes[Tags].Add(hash);
+                        if (post.File.Url is null)
+                            continue;
+                        PostDownloadHelper.MD5Hashes[lookupTag[0]].Add(hash);
                         PostDownloadHelper.DownloadQueue.Enqueue(new Download { FolderName = Tags, URL = post.File.Url.ToString() } );
                     }
                 }
