@@ -18,6 +18,7 @@ namespace MFCD
     /// </summary>
     public static class PostDownloadHelper
     {
+        [JsonProperty(PropertyName = "Tag hashset hashes")]
         public static ConcurrentDictionary<string, HashSet<string>> MD5Hashes { get; set; } = new ConcurrentDictionary<string, HashSet<string>>();
 
         public static ConcurrentQueue<Download> DownloadQueue { get; } = new ConcurrentQueue<Download>();
@@ -35,51 +36,35 @@ namespace MFCD
         {
             Program.OnClose += OnClose;
             client.DefaultRequestHeaders.UserAgent.ParseAdd("MFCD / 1.0 (By VelvetThePanda)");
-            log.Trace("Entering queue wait loop");
+            log.Info("Queue wait loop active.");
             await Task.Delay(1000);
-            log.Debug("Waiting for images to fill loop.");
+            log.Trace("Waiting for images to fill loop.");
             while (true)
             {
-                if (!threadsFinished)
+                if (threadsFinished)
                 {
-                    if (DownloadQueue.Count < 10)
-                        await Task.Delay(100);
-                    else
+                    log.Trace("Threads finished querying images; preceding to download images.");
+                    var numOfImages = DownloadQueue.Count;
+                    foreach (var img in DownloadQueue)
                     {
-                        for (var i = 0; i < 10; i++)
-                        {
-                            DownloadQueue.TryDequeue(out var download);
-                            if (download is null) continue;
-                            var stream = await client.GetStreamAsync(download.URL);
-                            var folderName = Regex.Replace(download.FolderName, "[\\/?:<>\"|]+", "", RegexOptions.IgnoreCase);
-                            var folderPath = Path.Combine(Directory.GetCurrentDirectory(), folderName.TrimEnd());
-                            var fileName = download.URL.Substring(download.URL.LastIndexOf('/') + 1);
-                            using var writer = new FileStream(Path.Combine(folderPath, fileName), FileMode.Create);
-                            await stream.CopyToAsync(writer);
-                        }
-                        Log.Trace("Saved 10 images");
-                    }
-                }
-                else
-                {
-                    log.Info("Finishing remaining images in queue.");
-                    foreach (var post in DownloadQueue)
-                    {
-                        var stream = await client.GetStreamAsync(post.URL);
-                        var folderName = Regex.Replace(post.FolderName, "[\\/?:<>\"|]+", "", RegexOptions.IgnoreCase);
+                        DownloadQueue.TryDequeue(out var download);
+                        if (download is null) continue;
+                        var stream = await client.GetStreamAsync(download.URL);
+                        var folderName = Regex.Replace(download.FolderName, "[\\/?:<>\"|]+", "", RegexOptions.IgnoreCase);
                         var folderPath = Path.Combine(Directory.GetCurrentDirectory(), folderName.TrimEnd());
-                        var fileName = post.URL.Substring(post.URL.LastIndexOf('/') + 1);
-
+                        var fileName = download.URL.Substring(download.URL.LastIndexOf('/') + 1);
                         using var writer = new FileStream(Path.Combine(folderPath, fileName), FileMode.Create);
                         await stream.CopyToAsync(writer);
+                        log.Info($"Saved {fileName}!");
                     }
 
-                    log.Trace("Threads joined.");
                     log.Info("No images remain in queue.");
+                    log.Info($"Saved {numOfImages} images to disk.");
+                    
 
                     var hashes = JsonConvert.SerializeObject(MD5Hashes, Formatting.Indented);
                     File.WriteAllText("HashStorage.hs", hashes);
-                    log.Debug("Saved hashes to file; exiting");
+                    log.Info("Saved hashes to file; exiting");
                     break;
                 }
             }
@@ -88,7 +73,7 @@ namespace MFCD
 
         public static void OnClose(object sender, EventArgs e)
         {
-            log.Debug("Close event raised");
+            log.Trace("Close event triggered! Saving hashes and exiting.");
             var hashes = JsonConvert.SerializeObject(MD5Hashes, Formatting.Indented);
             File.WriteAllText("HashStorage.hs", hashes);
         }

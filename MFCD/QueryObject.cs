@@ -68,7 +68,7 @@ namespace MFCD
                 foreach (var post in responseJSON.Posts)
                 {
                     var hash = post.File.Md5;
-                    var lookupTag = Tags.Split(' ');
+                    var lookupTag = Tags.Split(' ').Where(tag => tag != "").ToArray();
                     Array.Sort(lookupTag);
                     if (PostDownloadHelper.ContainsHash(lookupTag[0], hash))
                     {

@@ -24,22 +24,16 @@ namespace MFCD
             Console.CancelKeyPress += OnControlC;
             InitLogger();
             //Get Configuration from file.
+            Console.Title = "MFCD - Furry Image Downloader Tool";
             await Task.Delay(600);
             var config = await RetrieveConfigAsync();
             await Task.Delay(1500);
             GenerateDirectories(config);
+            await Task.Delay(1500);
             await new TopLevelQueryManager().QueryPostsFromJSON(config);
 
-
-
-            await Task.Delay(1500);
             await PostDownloadHelper.DrainQueue();
-
-
-            Console.ReadKey(true);
-
-
-
+            await Task.Delay(2000);
         }
 
         private static void GenerateDirectories(SearchList config)
@@ -70,7 +64,7 @@ namespace MFCD
                 }
 
                 var returnConfig = JsonConvert.DeserializeObject<SearchList>(config);
-                Log.Debug("Loaded configuration successfully");
+                Log.Info("Loaded configuration successfully");
                 return returnConfig;
             }
             else

@@ -21,12 +21,11 @@ namespace MFCD
                 Program.Log.Trace("Added Task to Task List.");
                 await Task.Delay(ran.Next(15, 50));
             }
-            Task queryTask = Task.WhenAll(TaskList);
-            await Task.Delay(500);
-            Program.Log.Info("Waiting for Tasks to complete.");
-            await queryTask;
-            await Task.Delay(1200);
-            PostDownloadHelper.ThreadsFinished = queryTask.IsCompleted;
+            Task queryTask = Task.WhenAll(TaskList).ContinueWith(_ => PostDownloadHelper.ThreadsFinished = true);
+            //await Task.Delay(500);
+            //Program.Log.Info("Waiting for Tasks to complete.");
+            //await queryTask.ContinueWith(_ => PostDownloadHelper.ThreadsFinished = true);
+
         }
     }
 }
